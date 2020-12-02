@@ -17,10 +17,12 @@ fn main() -> Result<()> {
 
     file.read_to_string(&mut input)?;
 
-    let i_list = input
+    let mut i_list = input
         .split('\n')
         .filter_map(|s| s.parse().ok())
         .collect::<Vec<i32>>();
+
+    i_list.sort_unstable();
 
     let pair = find_pair(i_list.as_slice(), 2020).ok_or_else(|| anyhow!("No pair found"))?;
 
@@ -34,8 +36,6 @@ fn main() -> Result<()> {
 }
 
 fn find_pair(list: &[i32], target: i32) -> Option<[i32; 2]> {
-    let mut list = Vec::from(list);
-    list.sort_unstable();
     let mut head = 0;
     let mut tail = list.len() - 1;
     loop {
@@ -78,8 +78,9 @@ mod test {
 
     #[test]
     fn basic() -> Result<()> {
-        let mut pair = find_pair(vec![1721, 979, 366, 299, 675, 1456].as_slice(), 2020)
-            .ok_or_else(|| anyhow!("No Pair"))?;
+        let mut tdata = vec![1721, 979, 366, 299, 675, 1456];
+        tdata.sort_unstable();
+        let mut pair = find_pair(tdata.as_slice(), 2020).ok_or_else(|| anyhow!("No Pair"))?;
         pair.sort_unstable();
         assert_eq!(pair[0], 299);
         assert_eq!(pair[1], 1721);
@@ -88,8 +89,9 @@ mod test {
 
     #[test]
     fn tripple() -> Result<()> {
-        let tripple = find_tripple(vec![1721, 979, 366, 299, 675, 1456].as_slice())
-            .ok_or_else(|| anyhow!("No Tripple"))?;
+        let mut tdata = vec![1721, 979, 366, 299, 675, 1456];
+        tdata.sort_unstable();
+        let tripple = find_tripple(tdata.as_slice()).ok_or_else(|| anyhow!("No Tripple"))?;
         let mult: i32 = Vec::from(tripple).iter().product();
         assert_eq!(mult, 241861950);
         Ok(())
