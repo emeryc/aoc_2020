@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Context, Result};
-use std::io::prelude::*;
+use anyhow::{Error, Result};
 use std::{fs::File, path::PathBuf};
+use std::{io::prelude::*, str::FromStr};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -41,31 +41,63 @@ impl PasswordEntry {
             _ => false,
         }
     }
+}
 
-    fn from_str(s: &str) -> Result<Self> {
-        let mut split = s.splitn(3, ' ');
-        let err_msg = || anyhow!("Expected format to be 'i-i c: pw, got {}", s);
-        let range = split.next().ok_or_else(err_msg)?;
-        let mut rsplit = range.split('-');
-        let min = rsplit
+impl FromStr for PasswordEntry {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        nom_parser::parse(s)
+    }
+}
+
+mod nom_parser {
+    use crate::PasswordEntry;
+    use anyhow::{anyhow, Result};
+    use nom::{
+        bytes::complete::tag,
+        character::complete::char,
+        character::complete::{alpha1, anychar, multispace0, one_of},
+        combinator::recognize,
+        multi::many0,
+        multi::many1,
+        sequence::{separated_pair, terminated},
+        IResult,
+    };
+
+    pub(crate) fn parse(s: &str) -> Result<PasswordEntry> {
+        let (s, (min, max)) = range(s).map_err(|e| anyhow!("{:?}", e))?;
+        let (s, letter) = l(s).map_err(|e| anyhow!("{:?}", e))?;
+        let (_, password) = pw(s).map_err(|e| anyhow!("{:?}", e))?;
+
+        let letter = letter
+            .chars()
             .next()
-            .ok_or_else(err_msg)?
-            .parse()
-            .with_context(|| format!("with input string - {}", s))?;
-        let max = rsplit
-            .next()
-            .ok_or_else(err_msg)?
-            .parse()
-            .with_context(|| format!("with input string - {}", s))?;
-        let letter = split.next().ok_or_else(err_msg)?;
-        let password = split.next().ok_or_else(err_msg)?;
+            .ok_or_else(|| anyhow!("Should have a character here."))?;
+        let password = password.to_string();
 
         Ok(PasswordEntry {
-            min,
-            max,
-            letter: letter.chars().next().ok_or_else(err_msg)?,
-            password: password.to_string(), // This is a un-needed allocation, but *shrug*
+            min: min.parse()?,
+            max: max.parse()?,
+            letter,
+            password,
         })
+    }
+
+    fn pw(s: &str) -> IResult<&str, &str> {
+        terminated(recognize(many1(anychar)), multispace0)(s)
+    }
+
+    fn l(s: &str) -> IResult<&str, &str> {
+        terminated(terminated(alpha1, tag(":")), multispace0)(s)
+    }
+
+    fn range(s: &str) -> IResult<&str, (&str, &str)> {
+        terminated(separated_pair(decimal, tag("-"), decimal), multispace0)(s)
+    }
+
+    fn decimal(input: &str) -> IResult<&str, &str> {
+        recognize(many1(terminated(one_of("0123456789"), many0(char('_')))))(input)
     }
 }
 
@@ -79,7 +111,7 @@ fn main() -> Result<()> {
     let passwords = input
         .split('\n')
         .filter(|s| !s.is_empty())
-        .map(|s| PasswordEntry::from_str(s))
+        .map(|s| s.parse::<PasswordEntry>())
         .collect::<Result<Vec<_>>>()?;
 
     println!(
@@ -160,6 +192,21 @@ mod test {
     fn parse() -> Result<()> {
         assert_eq!(
             PasswordEntry::from_str("1-3 a: abcde")?,
+            PasswordEntry {
+                min: 1,
+                max: 3,
+                letter: 'a',
+                password: "abcde".to_string(),
+            }
+        );
+        Ok(())
+    }
+    use crate::nom_parser;
+
+    #[test]
+    fn nom_parse() -> Result<()> {
+        assert_eq!(
+            nom_parser::parse("1-3 a: abcde")?,
             PasswordEntry {
                 min: 1,
                 max: 3,
