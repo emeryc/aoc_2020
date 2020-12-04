@@ -1,20 +1,20 @@
 use anyhow::{Error, Result};
-use std::io::prelude::*;
 use std::{cmp::max, fs::File, path::PathBuf, str::FromStr};
+use std::{collections::HashSet, io::prelude::*};
 use structopt::StructOpt;
 
 #[derive(Debug)]
 struct Map {
     width: usize,
     pub height: usize,
-    trees: Vec<[usize; 2]>,
+    trees: HashSet<[usize; 2]>,
 }
 
 impl FromStr for Map {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let trees: Vec<_> = s
+        let trees: HashSet<_> = s
             .split('\n')
             .enumerate()
             .flat_map(|(row_idx, row)| {
@@ -40,19 +40,11 @@ impl FromStr for Map {
 }
 
 impl Map {
-    pub fn is_tree(&self, pos: &[usize; 2]) -> bool {
-        let [x, y] = *pos;
-        let x = if x > self.width {
-            x % (self.width + 1)
-        } else {
-            x
-        };
-
-        if y > self.height {
-            false
-        } else {
-            self.trees.contains(&([x, y]))
-        }
+    pub fn in_path(&self, path: impl Iterator<Item = [usize; 2]>) -> u128 {
+        let path_set = path
+            .map(|[x, y]| [x % (self.width + 1), y])
+            .collect::<HashSet<_>>();
+        self.trees.intersection(&path_set).count() as u128
     }
 }
 
@@ -103,19 +95,13 @@ fn main() -> Result<()> {
     file.read_to_string(&mut input)?;
 
     let map: Map = input.parse()?;
-    let trees = Toboggan::path(1, 3, map.height)
-        .filter(|pos| map.is_tree(pos))
-        .count();
+    let trees = map.in_path(Toboggan::path(1, 3, map.height));
 
     println!("Trees: {}", trees);
 
     let product: u128 = vec![[1 as usize, 1 as usize], [1, 3], [1, 5], [1, 7], [2, 1]]
         .iter()
-        .map(|[fall, run]| {
-            Toboggan::path(*fall, *run, map.height)
-                .filter(|pos| map.is_tree(pos))
-                .count() as u128
-        })
+        .map(|[fall, run]| map.in_path(Toboggan::path(*fall, *run, map.height)))
         .product();
 
     println!("Tree Product: {}", product);
@@ -142,12 +128,7 @@ mod test {
             .parse::<Map>()?;
 
         println!("{:#?}", map);
-        assert_eq!(
-            Toboggan::path(1, 3, map.height)
-                .filter(|pos| map.is_tree(pos))
-                .count(),
-            7
-        );
+        assert_eq!(map.in_path(Toboggan::path(1, 3, map.height)), 7);
 
         Ok(())
     }
