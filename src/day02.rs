@@ -1,16 +1,9 @@
-use anyhow::{Error, Result};
-use std::{fs::File, path::PathBuf};
-use std::{io::prelude::*, str::FromStr};
-use structopt::StructOpt;
+use std::str::FromStr;
 
-#[derive(Debug, StructOpt)]
-struct Args {
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
-}
+use anyhow::{Error, Result};
 
 #[derive(Debug, Eq, PartialEq)]
-struct PasswordEntry {
+pub struct PasswordEntry {
     min: u8,
     max: u8,
     letter: char,
@@ -52,7 +45,7 @@ impl FromStr for PasswordEntry {
 }
 
 mod nom_parser {
-    use crate::PasswordEntry;
+    use super::PasswordEntry;
     use anyhow::{anyhow, Result};
     use nom::{
         bytes::complete::tag,
@@ -101,30 +94,22 @@ mod nom_parser {
     }
 }
 
-fn main() -> Result<()> {
-    let args = Args::from_args();
-    let mut file = File::open(args.input)?;
-    let mut input = String::new();
-
-    file.read_to_string(&mut input)?;
-
-    let passwords = input
+#[aoc_generator(day2)]
+fn generator(input: &str) -> Result<Vec<PasswordEntry>> {
+    input
         .split('\n')
-        .filter(|s| !s.is_empty())
         .map(|s| s.parse::<PasswordEntry>())
-        .collect::<Result<Vec<_>>>()?;
+        .collect()
+}
 
-    println!(
-        "valid passwords: {}",
-        passwords.iter().filter(|pw| pw.is_valid()).count()
-    );
+#[aoc(day2, part1)]
+fn solve_part1(passwords: &[PasswordEntry]) -> usize {
+    passwords.iter().filter(|pw| pw.is_valid()).count()
+}
 
-    println!(
-        "valid passwords: {}",
-        passwords.iter().filter(|pw| pw.is_valid_2()).count()
-    );
-
-    Ok(())
+#[aoc(day2, part2)]
+fn solve_part2(passwords: &[PasswordEntry]) -> usize {
+    passwords.iter().filter(|pw| pw.is_valid_2()).count()
 }
 
 #[cfg(test)]

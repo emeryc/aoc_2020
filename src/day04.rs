@@ -1,49 +1,33 @@
-use anyhow::{Error, Result};
-use std::{fs::File, path::PathBuf};
-use std::{io::prelude::*, str::FromStr};
-use structopt::StructOpt;
+use anyhow::Result;
 
-#[derive(Debug, StructOpt)]
-struct Args {
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
+#[aoc_generator(day4)]
+fn generator(input: &str) -> Result<Vec<Passport>> {
+    parser::passports(input)
 }
 
-fn main() -> Result<()> {
-    let args = Args::from_args();
-    let mut file = File::open(args.input)?;
-    let mut input = String::new();
+#[aoc(day4, part1)]
+fn solve_part1(passports: &[Passport]) -> usize {
+    passports.iter().filter(|p| p.is_valid()).count()
+}
 
-    file.read_to_string(&mut input)?;
-
-    let count = parser::passports(&input)?
-        .iter()
-        .filter(|p| p.is_valid())
-        .count();
-    println!("Valid Passports: {}", count);
-
-    let count = parser::passports(&input)?
-        .iter()
-        .filter(|p| p.is_valid_2())
-        .count();
-    println!("Really Valid Passports: {}", count);
-
-    Ok(())
+#[aoc(day4, part2)]
+fn solve_part2(passports: &[Passport]) -> usize {
+    passports.iter().filter(|p| p.is_valid_2()).count()
 }
 
 #[derive(Debug, Default)]
-struct Passport<'a> {
+pub struct Passport {
     expiration: Option<u32>,
     birth: Option<u32>,
     issue: Option<u32>,
-    height: Option<&'a str>,
-    hair_color: Option<&'a str>,
-    eye_color: Option<&'a str>,
-    pid: Option<&'a str>,
-    cid: Option<&'a str>,
+    height: Option<String>,
+    hair_color: Option<String>,
+    eye_color: Option<String>,
+    pid: Option<String>,
+    cid: Option<String>,
 }
 
-impl<'a> Passport<'a> {
+impl Passport {
     pub fn is_valid(&self) -> bool {
         self.eye_color.is_some()
             && self.birth.is_some()
@@ -69,46 +53,36 @@ impl<'a> Passport<'a> {
     // also want to not return any invalid passports, and we would have to skip them...and that
     // just seems like a lot of work...so instead this hack will have to do.
     pub fn is_valid_2(&self) -> bool {
-        (match self.birth {
-            Some(birth) if (1920..=2002).contains(&birth) => true,
-            _ => false,
-        }) && match self.issue {
-            Some(issue) if (2010..=2020).contains(&issue) => true,
-            _ => false,
-        } && match self.expiration {
-            Some(expr) if (2020..=2030).contains(&expr) => true,
-            _ => false,
-        } && match self.height {
-            Some(height) => {
-                //let height = height.bytes();
-                let (val, unit) = height.split_at(height.len() - 2);
+        matches!(self.birth, Some(birth) if (1920..=2002).contains(&birth))
+            && matches!(self.issue, Some(issue) if (2010..=2020).contains(&issue))
+            && matches!(self.expiration, Some(expr) if (2020..=2030).contains(&expr))
+            && match self.height {
+                Some(ref height) => {
+                    //let height = height.bytes();
+                    let (val, unit) = height.split_at(height.len() - 2);
 
-                if unit == "in" {
-                    val.parse::<u32>()
-                        .map_or(false, |val| val >= 59 && val <= 76)
-                } else if unit == "cm" {
-                    val.parse::<u32>()
-                        .map_or(false, |val| val >= 150 && val <= 193)
-                } else {
-                    false
+                    if unit == "in" {
+                        val.parse::<u32>()
+                            .map_or(false, |val| val >= 59 && val <= 76)
+                    } else if unit == "cm" {
+                        val.parse::<u32>()
+                            .map_or(false, |val| val >= 150 && val <= 193)
+                    } else {
+                        false
+                    }
                 }
+                _ => false,
             }
-            _ => false,
-        } && match self.hair_color {
-            Some(color) => {
-                color.as_bytes()[0] == b"#"[0]
-                    && color.bytes().skip(1).all(|c| c.is_ascii_hexdigit())
+            && match self.hair_color {
+                Some(ref color) => {
+                    color.as_bytes()[0] == b"#"[0]
+                        && color.bytes().skip(1).all(|c| c.is_ascii_hexdigit())
+                }
+                _ => false,
             }
-            _ => false,
-        } && match self.eye_color {
-            Some(color) if ["amb", "blu", "brn", "gry", "grn", "hzl", "oth"].contains(&color) => {
-                true
-            }
-            _ => false,
-        } && match self.pid {
-            Some(pid) if pid.len() == 9 && pid.bytes().all(|c| c.is_ascii_digit()) => true,
-            _ => false,
-        }
+            && matches!(self.eye_color,
+                Some(ref color) if ["amb", "blu", "brn", "gry", "grn", "hzl", "oth"].contains(&color.as_str()))
+            && matches!(self.pid, Some(ref pid) if pid.len() == 9 && pid.bytes().all(|c| c.is_ascii_digit()))
     }
 }
 
@@ -116,8 +90,8 @@ mod parser {
     use nom::{
         branch::alt,
         bytes::complete::tag,
+        character::complete::char,
         character::complete::none_of,
-        character::complete::{char, multispace1},
         combinator::recognize,
         multi::{many0, many1},
         sequence::{pair, terminated},
@@ -126,7 +100,7 @@ mod parser {
 
     use anyhow::Result;
 
-    use crate::Passport;
+    use super::Passport;
 
     fn field(input: &str) -> IResult<&str, (&str, &str)> {
         pair(
@@ -147,7 +121,7 @@ mod parser {
         )(input)
     }
 
-    fn passport<'a>(input: &'a str) -> IResult<&str, Passport<'a>> {
+    fn passport(input: &str) -> IResult<&str, Passport> {
         let (remain, fields) = terminated(many1(field), many0(tag("\n")))(input)?;
         let mut passport = Passport::default();
 
@@ -158,11 +132,11 @@ mod parser {
                 ("eyr", val) => {
                     passport.expiration = Some(val.parse().expect("Should be a number"))
                 }
-                ("hgt", val) => passport.height = Some(val),
-                ("hcl", val) => passport.hair_color = Some(val),
-                ("ecl", val) => passport.eye_color = Some(val),
-                ("pid", val) => passport.pid = Some(val),
-                ("cid", val) => passport.cid = Some(val),
+                ("hgt", val) => passport.height = Some(val.to_string()),
+                ("hcl", val) => passport.hair_color = Some(val.to_string()),
+                ("ecl", val) => passport.eye_color = Some(val.to_string()),
+                ("pid", val) => passport.pid = Some(val.to_string()),
+                ("cid", val) => passport.cid = Some(val.to_string()),
                 e => unreachable!("{:?}", e),
             };
         }
@@ -170,7 +144,7 @@ mod parser {
         Ok((remain, passport))
     }
 
-    pub(crate) fn passports<'a>(input: &'a str) -> Result<Vec<Passport<'a>>> {
+    pub fn passports(input: &str) -> Result<Vec<Passport>> {
         let (_, passports) = many1(passport)(input).expect("Should be fine!");
 
         Ok(passports)

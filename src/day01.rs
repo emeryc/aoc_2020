@@ -1,38 +1,32 @@
-use anyhow::anyhow;
 use anyhow::Result;
-use std::io::prelude::*;
-use std::{fs::File, path::PathBuf};
-use structopt::StructOpt;
+use aoc_runner_derive::{aoc, aoc_generator};
 
-#[derive(Debug, StructOpt)]
-struct Args {
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
-}
-
-fn main() -> Result<()> {
-    let args = Args::from_args();
-    let mut file = File::open(args.input)?;
-    let mut input = String::new();
-
-    file.read_to_string(&mut input)?;
-
-    let mut i_list = input
+#[aoc_generator(day1)]
+fn parse_input_day1(input: &str) -> Vec<i32> {
+    input
         .split('\n')
         .filter_map(|s| s.parse().ok())
-        .collect::<Vec<i32>>();
+        .collect::<Vec<i32>>()
+}
 
-    i_list.sort_unstable();
+#[aoc(day1, part1)]
+fn solve_part1(input: &[i32]) -> i32 {
+    let mut input = input.to_owned();
+    input.sort_unstable();
+    find_pair(input.as_slice(), 2020)
+        .expect("Expect a pair")
+        .iter()
+        .product()
+}
 
-    let pair = find_pair(i_list.as_slice(), 2020).ok_or_else(|| anyhow!("No pair found"))?;
-
-    println!("{}", pair.iter().product::<i32>());
-
-    let tripple = find_tripple(i_list.as_slice()).ok_or_else(|| anyhow!("No tripple found"))?;
-
-    println!("{}", tripple.iter().product::<i32>());
-
-    Ok(())
+#[aoc(day1, part2)]
+fn solve_part2(input: &[i32]) -> i32 {
+    let mut input = input.to_owned();
+    input.sort_unstable();
+    find_tripple(input.as_slice())
+        .expect("Expect a tripple")
+        .iter()
+        .product()
 }
 
 fn find_pair(list: &[i32], target: i32) -> Option<[i32; 2]> {
@@ -74,7 +68,7 @@ fn find_tripple(list: &[i32]) -> Option<[i32; 3]> {
 mod test {
     use anyhow::{anyhow, Result};
 
-    use crate::{find_pair, find_tripple};
+    use super::*;
 
     #[test]
     fn basic() -> Result<()> {

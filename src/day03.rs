@@ -1,7 +1,6 @@
 use anyhow::{Error, Result};
-use std::{cmp::max, fs::File, path::PathBuf, str::FromStr};
-use std::{collections::HashSet, io::prelude::*};
-use structopt::StructOpt;
+use std::collections::HashSet;
+use std::{cmp::max, str::FromStr};
 
 #[derive(Debug)]
 struct Map {
@@ -81,32 +80,22 @@ impl Iterator for Toboggan {
     }
 }
 
-#[derive(Debug, StructOpt)]
-struct Args {
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
+#[aoc_generator(day3)]
+fn generator(input: &str) -> Result<Map> {
+    input.parse()
 }
 
-fn main() -> Result<()> {
-    let args = Args::from_args();
-    let mut file = File::open(args.input)?;
-    let mut input = String::new();
+#[aoc(day3, part1)]
+fn solve_part1(map: &Map) -> u128 {
+    map.in_path(Toboggan::path(1, 3, map.height))
+}
 
-    file.read_to_string(&mut input)?;
-
-    let map: Map = input.parse()?;
-    let trees = map.in_path(Toboggan::path(1, 3, map.height));
-
-    println!("Trees: {}", trees);
-
-    let product: u128 = vec![[1 as usize, 1 as usize], [1, 3], [1, 5], [1, 7], [2, 1]]
+#[aoc(day3, part2)]
+fn solve_part2(map: &Map) -> u128 {
+    vec![[1 as usize, 1 as usize], [1, 3], [1, 5], [1, 7], [2, 1]]
         .iter()
         .map(|[fall, run]| map.in_path(Toboggan::path(*fall, *run, map.height)))
-        .product();
-
-    println!("Tree Product: {}", product);
-
-    Ok(())
+        .product()
 }
 
 #[cfg(test)]

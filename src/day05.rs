@@ -1,37 +1,28 @@
 use anyhow::{anyhow, Error, Result};
-use std::{fs::File, path::PathBuf};
-use std::{io::prelude::*, str::FromStr};
-use structopt::StructOpt;
+use std::fmt::Display;
+use std::str::FromStr;
 
-#[derive(Debug, StructOpt)]
-struct Args {
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
+#[aoc_generator(day5)]
+fn generator(input: &str) -> Result<Vec<BoardingPass>> {
+    input
+        .split('\n')
+        .map(|pass| pass.parse::<BoardingPass>())
+        .collect()
 }
 
-fn main() -> Result<()> {
-    let args = Args::from_args();
-    let mut file = File::open(args.input)?;
-    let mut input = String::new();
+#[aoc(day5, part1)]
+fn solve_part1(passes: &[BoardingPass]) -> BoardingPass {
+    passes.iter().max_by_key(|p| p.id()).unwrap().clone()
+}
 
-    file.read_to_string(&mut input)?;
-
-    let pass = input
-        .split('\n')
-        .filter_map(|pass| pass.parse::<BoardingPass>().ok())
-        .max_by_key(|pass| pass.id())
-        .ok_or_else(|| anyhow!("No passes?"))?;
-
-    println!("{}", pass.id());
-
-    let mut passes: Vec<_> = input
-        .split('\n')
-        .filter_map(|pass| pass.parse::<BoardingPass>().ok())
-        .collect();
+#[aoc(day5, part2)]
+fn solve_part2(passes: &[BoardingPass]) -> BoardingPass {
+    let mut passes: Vec<_> = passes.to_vec();
     passes.sort_unstable_by_key(|pass| (pass.row, pass.column));
-    let before_missing = passes.iter().skip(1).fold(
-        passes.first().ok_or_else(|| anyhow!("No First Element?"))?,
-        |last, pass| {
+    let before_missing = passes
+        .iter()
+        .skip(1)
+        .fold(passes.first().unwrap(), |last, pass| {
             let ordered = if last.column == 7 {
                 last.row + 1 == pass.row && pass.column == 0
             } else {
@@ -42,37 +33,44 @@ fn main() -> Result<()> {
             } else {
                 last
             }
+        });
+
+    BoardingPass {
+        row: {
+            if before_missing.column == 7 {
+                before_missing.row + 1
+            } else {
+                before_missing.row
+            }
         },
-    );
-
-    println!(
-        "missing: {}",
-        (BoardingPass {
-            row: {
-                if before_missing.column == 7 {
-                    before_missing.row + 1
-                } else {
-                    before_missing.row
-                }
-            },
-            column: {
-                if before_missing.column == 7 {
-                    0
-                } else {
-                    before_missing.column + 1
-                }
-            },
-        })
-        .id()
-    );
-
-    Ok(())
+        column: {
+            if before_missing.column == 7 {
+                0
+            } else {
+                before_missing.column + 1
+            }
+        },
+    }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct BoardingPass {
     row: u8,
     column: u8,
+}
+
+impl Display for BoardingPass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            format!(
+                "row: {}, column: {}: id: {}",
+                self.row,
+                self.column,
+                self.id(),
+            )
+            .as_str(),
+        )
+    }
 }
 
 impl BoardingPass {
@@ -105,6 +103,25 @@ impl FromStr for BoardingPass {
     }
 }
 
+struct SeatID(u64);
+impl FromStr for SeatID {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(SeatID(
+            s.chars()
+                .map(|d| match d {
+                    'F' => 0,
+                    'L' => 0,
+                    'B' => 1,
+                    'R' => 1,
+                    _ => unreachable!(),
+                })
+                .fold(0, |acc, v| (acc << 1) | v),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -114,6 +131,7 @@ mod test {
         let p1 = "FBFBBFFRLR".parse::<BoardingPass>()?;
         assert_eq!(p1, BoardingPass { row: 44, column: 5 });
         assert_eq!(p1.id(), 357);
+        assert_eq!("FBFBBFFRLR".parse::<SeatID>()?.0, 357);
 
         Ok(())
     }
