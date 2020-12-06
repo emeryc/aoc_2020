@@ -186,7 +186,7 @@ mod test {
         );
         Ok(())
     }
-    use crate::nom_parser;
+    use super::nom_parser;
 
     #[test]
     fn nom_parse() -> Result<()> {
