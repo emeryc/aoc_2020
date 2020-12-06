@@ -1,49 +1,40 @@
 use std::collections::HashSet;
 
 #[aoc_generator(day6)]
-fn generate(input: &str) -> Vec<Vec<Vec<u8>>> {
+fn generate(input: &str) -> Vec<Vec<u32>> {
     input
         .split("\n\n")
         .map(|group| {
             group
                 .split('\n')
-                .map(|person| person.bytes().collect())
+                .map(|person| person.bytes().fold(0u32, |acc, b| acc | 1 << (b - b'a')))
                 .collect()
         })
         .collect()
 }
 
 #[aoc(day6, part1)]
-fn solve_part1(questionaires: &[Vec<Vec<u8>>]) -> u64 {
+fn solve_part1(questionaires: &[Vec<u32>]) -> u32 {
     questionaires
         .iter()
         .map(|group| {
             group
                 .iter()
-                .flat_map(|person| person.iter())
-                .collect::<HashSet<_>>()
-                .len() as u64
+                .fold(0u32, |acc, person| acc | person)
+                .count_ones()
         })
         .sum()
 }
 
 #[aoc(day6, part2)]
-fn solve_part2(questionaires: &[Vec<Vec<u8>>]) -> u64 {
+fn solve_part2(questionaires: &[Vec<u32>]) -> u32 {
     questionaires
         .iter()
         .map(|group| {
             group
                 .iter()
-                .skip(1)
-                .fold(
-                    group.first().unwrap().iter().collect::<HashSet<_>>(),
-                    |acc, person| {
-                        acc.intersection(&person.iter().collect::<HashSet<_>>())
-                            .cloned()
-                            .collect()
-                    },
-                )
-                .len() as u64
+                .fold(u32::MAX, |acc, person| acc & person)
+                .count_ones()
         })
         .sum()
 }
