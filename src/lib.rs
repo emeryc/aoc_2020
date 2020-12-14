@@ -10,6 +10,7 @@ mod day09;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
 
 #[macro_use]
 extern crate aoc_runner_derive;
