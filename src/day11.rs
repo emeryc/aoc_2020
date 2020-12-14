@@ -67,29 +67,9 @@ fn run_seats(
     output
 }
 
-fn to_string(map: &[GeneratorType]) -> String {
-    let mut layout = Vec::new();
-
-    for y in map.iter() {
-        layout.push(
-            y.iter()
-                .map(|elem| match elem {
-                    Element::Empyt => "L",
-                    Element::Taken => "#",
-                    Element::Floor => ".",
-                })
-                .collect::<Vec<_>>()
-                .join(""),
-        );
-    }
-
-    layout.join("\n")
-}
-
 #[aoc(day11, part1)]
 fn solve_part1(input: &[GeneratorType]) -> usize {
     let mut last = input.to_vec();
-    let mut count = 0;
     loop {
         let this = run_seats(
             last.as_slice(),
@@ -122,8 +102,6 @@ fn solve_part1(input: &[GeneratorType]) -> usize {
                 .filter(|elm| **elm == Element::Taken)
                 .count();
         }
-        //println!("iteration {}\n{}\n", count, to_string(last.as_slice()));
-        count += 1;
         last = this;
     }
 }
@@ -131,7 +109,6 @@ fn solve_part1(input: &[GeneratorType]) -> usize {
 #[aoc(day11, part2)]
 fn solve_part2(input: &[GeneratorType]) -> usize {
     let mut last = input.to_vec();
-    let mut count = 0;
     loop {
         let this = run_seats(
             last.as_slice(),
@@ -246,7 +223,6 @@ fn solve_part2(input: &[GeneratorType]) -> usize {
                 .count();
         }
         //println!("iteration {}\n{}\n", count, to_string(last.as_slice()));
-        count += 1;
         last = this;
     }
 }

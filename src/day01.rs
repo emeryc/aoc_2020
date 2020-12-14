@@ -1,5 +1,5 @@
-use anyhow::Result;
 use aoc_runner_derive::{aoc, aoc_generator};
+use eyre::Result;
 
 #[aoc_generator(day1)]
 fn parse_input_day1(input: &str) -> Vec<i32> {

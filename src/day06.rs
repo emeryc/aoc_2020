@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[aoc_generator(day6)]
 fn generate(input: &str) -> Vec<Vec<u32>> {
     input

@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use eyre::{Error, Result};
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -14,7 +14,7 @@ use std::{collections::HashMap, collections::HashSet, collections::VecDeque, str
 
 #[aoc_generator(day7)]
 fn generator(input: &str) -> Result<Vec<Rule>> {
-    input.split("\n").map(|rule| rule.parse::<Rule>()).collect()
+    input.split('\n').map(|rule| rule.parse::<Rule>()).collect()
 }
 
 struct Rule {

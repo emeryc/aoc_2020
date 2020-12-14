@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 
 #[aoc_generator(day4)]
 fn generator(input: &str) -> Result<Vec<Passport>> {
@@ -98,9 +98,7 @@ mod parser {
         IResult,
     };
 
-    use anyhow::Result;
-
-    use super::Passport;
+    use super::*;
 
     fn field(input: &str) -> IResult<&str, (&str, &str)> {
         pair(

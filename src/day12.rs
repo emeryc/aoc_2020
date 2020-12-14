@@ -1,4 +1,4 @@
-use anyhow::Error;
+use eyre::Error;
 use std::str::FromStr;
 
 type GeneratorType = Command;
@@ -68,29 +68,13 @@ impl Ship {
                 }
                 self.heading = tmp;
             }
-            Command::Forward(val) => {
-                // val * cos(self.heading) = North,
-                // val * sin(self.heading) = East,
-                //let (heading, n_mult, e_mult) = if (0.0..90.0).contains(&self.heading) {
-                //    (self.heading, 1.0, 1.0)
-                //} else if (90.0..180.0).contains(&self.heading) {
-                //    (self.heading - 90.0, -1.0, 1.0)
-                //} else if (180.0..270.0).contains(&self.heading) {
-                //    (self.heading - 180.0, -1.0, -1.0)
-                //} else {
-                //    (self.heading - 270.0, 1.0, -1.0)
-                //};
-                //self.north += n_mult * (val * i64::sin(heading * std::i64::consts::PI / 180.0));
-                //self.east += e_mult * (val * i64::cos(heading * std::i64::consts::PI / 180.0));
-
-                match self.heading {
-                    0 => self.north += val,
-                    90 => self.east += val,
-                    180 => self.north -= val,
-                    270 => self.east -= val,
-                    v => unimplemented!("Shouldn't happen: {}", v),
-                }
-            }
+            Command::Forward(val) => match self.heading {
+                0 => self.north += val,
+                90 => self.east += val,
+                180 => self.north -= val,
+                270 => self.east -= val,
+                v => unimplemented!("Shouldn't happen: {}", v),
+            },
         }
     }
 
@@ -168,7 +152,6 @@ fn solve_part2(input: &[GeneratorType]) -> i64 {
     let mut waypoint = Waypoint::new();
     input.iter().for_each(|cmd| {
         waypoint.mv(&mut ship, cmd);
-        //println!("cmd: {:?}, ship: {:?}, waypoint: {:?}", cmd, ship, waypoint);
     });
     ship.pos()
 }
