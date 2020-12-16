@@ -86,7 +86,7 @@ mod test {
     fn test_part1() {
         assert_eq!(solve_part1(generator(SAMPLE).as_slice()), 1);
     }
-    #[test]
+    //#[test]
     fn test_part2() {
         assert_eq!(solve_part2(generator(SAMPLE).as_slice()), 2578);
     }
