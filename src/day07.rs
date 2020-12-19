@@ -139,7 +139,7 @@ fn solve_part2(input: &[Rule]) -> u32 {
 
 #[cfg(test)]
 mod test {
-    use anyhow::Result;
+    use eyre::Result;
 
     use super::*;
 

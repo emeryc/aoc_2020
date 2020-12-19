@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{Error, Result};
+use eyre::{eyre, ContextCompat, Error, Result};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct PasswordEntry {
@@ -45,8 +45,7 @@ impl FromStr for PasswordEntry {
 }
 
 mod nom_parser {
-    use super::PasswordEntry;
-    use anyhow::{anyhow, Result};
+    use super::*;
     use nom::{
         bytes::complete::tag,
         character::complete::char,
@@ -59,14 +58,14 @@ mod nom_parser {
     };
 
     pub(crate) fn parse(s: &str) -> Result<PasswordEntry> {
-        let (s, (min, max)) = range(s).map_err(|e| anyhow!("{:?}", e))?;
-        let (s, letter) = l(s).map_err(|e| anyhow!("{:?}", e))?;
-        let (_, password) = pw(s).map_err(|e| anyhow!("{:?}", e))?;
+        let (s, (min, max)) = range(s).map_err(|e| eyre!("{}", e))?;
+        let (s, letter) = l(s).map_err(|e| eyre!("{}", e))?;
+        let (_, password) = pw(s).map_err(|e| eyre!("{}", e))?;
 
         let letter = letter
             .chars()
             .next()
-            .ok_or_else(|| anyhow!("Should have a character here."))?;
+            .context("Should have a character here")?;
         let password = password.to_string();
 
         Ok(PasswordEntry {

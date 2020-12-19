@@ -66,7 +66,7 @@ fn find_tripple(list: &[i32]) -> Option<[i32; 3]> {
 
 #[cfg(test)]
 mod test {
-    use anyhow::{anyhow, Result};
+    use eyre::{anyhow, Result};
 
     use super::*;
 

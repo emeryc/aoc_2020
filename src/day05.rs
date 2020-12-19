@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use eyre::{Error, Result};
 use std::str::FromStr;
 
 #[aoc_generator(day5)]

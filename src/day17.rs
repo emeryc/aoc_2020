@@ -1,4 +1,5 @@
 use eyre::Result;
+use itertools::iproduct;
 use std::collections::{HashMap, HashSet};
 
 type Point = (isize, isize, isize);
@@ -25,80 +26,36 @@ fn generator(input: &str) -> Result<GeneratorType> {
 
 fn neigbors(cell: &Point) -> HashSet<Point> {
     let (x, y, z) = cell;
-    let mut n: HashSet<Point> = perms(&[*x, *y, *z])
-        .into_iter()
-        .map(|vec| {
-            let mut ivec = vec.into_iter();
-            (
-                ivec.next().unwrap(),
-                ivec.next().unwrap(),
-                ivec.next().unwrap(),
-            )
-        })
-        .collect();
-
-    n.remove(cell);
-
-    n
+    iproduct!(-1..=1, -1..=1, -1..=1)
+        .map(|(d_x, d_y, d_z)| (x + d_x, y + d_y, z + d_z))
+        .filter(|n| n != cell)
+        .collect()
 }
 
 fn neigbors4(cell: &Point4) -> HashSet<Point4> {
     let (x, y, z, w) = cell;
-    let mut n: HashSet<Point4> = perms(&[*x, *y, *z, *w])
-        .into_iter()
-        .map(|vec| {
-            let mut ivec = vec.into_iter();
-            (
-                ivec.next().unwrap(),
-                ivec.next().unwrap(),
-                ivec.next().unwrap(),
-                ivec.next().unwrap(),
-            )
-        })
-        .collect();
-
-    n.remove(cell);
-
-    n
-}
-
-fn perms(tail: &[isize]) -> Vec<Vec<isize>> {
-    if tail.is_empty() {
-        vec![Vec::new()]
-    } else {
-        let head = tail[0];
-        let p = perms(&tail[1..]);
-        let mut ret = Vec::new();
-        for d in -1..=1 {
-            for p_v in p.iter() {
-                let mut t1 = vec![head + d];
-                t1.append(&mut p_v.clone());
-                ret.push(t1)
-            }
-        }
-        ret
-    }
+    iproduct!(-1..=1, -1..=1, -1..=1, -1..=1)
+        .map(|(d_x, d_y, d_z, d_w)| (x + d_x, y + d_y, z + d_z, w + d_w))
+        .filter(|n| n != cell)
+        .collect()
 }
 
 #[aoc(day17, part1)]
 fn solve_part1(input: &GeneratorType) -> usize {
     let mut last = input.clone();
     for _ in 0..6 {
-        // println!("{:?}", last);
-        let mut consider: HashSet<Point> = HashSet::new();
-        for x in last.iter() {
-            consider.extend(neigbors(x).iter());
+        let mut consider: HashMap<Point, usize> = HashMap::new();
+        for x in last.iter().flat_map(|x| neigbors(x)) {
+            let point_count = consider.entry(x).or_insert(0);
+            *point_count += 1;
         }
 
         let mut next: HashSet<Point> = HashSet::new();
-        for possible in consider.iter() {
-            let n = neigbors(&possible);
-            //println!("neighbors - {:?}", n);
-            let on_neighbors = last.intersection(&n).count();
+        for (possible, on_neighbors) in consider.into_iter() {
             if (last.contains(&possible) && (on_neighbors == 2 || on_neighbors == 3))
                 || (!last.contains(&possible) && on_neighbors == 3)
             {
-                next.insert(*possible);
+                next.insert(possible);
             };
         }
         last = next;
@@ -117,21 +74,18 @@ fn solve_part2(input: &GeneratorType) -> usize {
         })
         .collect::<HashSet<Point4>>();
     for _ in 0..6 {
-        // println!("{:?}", last);
-        let mut consider: HashSet<Point4> = HashSet::new();
-        for x in last.iter() {
-            consider.extend(neigbors4(x).iter());
+        let mut consider: HashMap<Point4, usize> = HashMap::new();
+        for x in last.iter().flat_map(|x| neigbors4(x)) {
+            let point_count = consider.entry(x).or_insert(0);
+            *point_count += 1;
         }
 
         let mut next: HashSet<Point4> = HashSet::new();
-        for possible in consider.iter() {
-            let n = neigbors4(&possible);
-            //println!("neighbors - {:?}", n);
-            let on_neighbors = last.intersection(&n).count();
+        for (possible, on_neighbors) in consider.into_iter() {
             if (last.contains(&possible) && (on_neighbors == 2 || on_neighbors == 3))
                 || (!last.contains(&possible) && on_neighbors == 3)
             {
-                next.insert(*possible);
+                next.insert(possible);
             };
         }
         last = next;

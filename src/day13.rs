@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use eyre::{ContextCompat, Result};
 type GeneratorType = State;
 
 #[derive(Debug, Clone)]
@@ -13,11 +13,11 @@ fn generator(input: &str) -> Result<GeneratorType> {
     Ok(State {
         arrival: input
             .next()
-            .with_context(|| "Split on \\n and 0 is empty")?
+            .context("Split on \\n and 0 is empty")?
             .parse()?,
         ids: input
             .next()
-            .with_context(|| "Split on \\n and 1 is empty")?
+            .context("Split on \\n and 1 is empty")?
             .split(',')
             .map(|x| x.parse().ok())
             .collect(),
