@@ -72,7 +72,7 @@ struct Puzzle {
     cnf: Vec<CNF>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct CNF {
     id: usize,
     rule: CNFR,
@@ -84,7 +84,7 @@ impl Debug for CNF {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 enum CNFR {
     Term(u8),
     Bin(usize, usize),
@@ -153,20 +153,18 @@ impl Puzzle {
                         let mut tmp = Vec::new();
                         for (a, b) in last.iter() {
                             if unit.iter().any(|(id, _)| *id == a) {
-                                tmp.append(
+                                tmp.extend(
                                     &mut unit
                                         .iter()
                                         .filter(|(id, _)| a == *id)
-                                        .map(|(_, r)| (**r, *b))
-                                        .collect(),
+                                        .map(|(_, r)| (**r, *b)),
                                 )
                             } else if unit.iter().any(|(id, _)| *id == b) {
-                                tmp.append(
+                                tmp.extend(
                                     &mut unit
                                         .iter()
                                         .filter(|(id, _)| b == *id)
-                                        .map(|(_, r)| (*a, **r))
-                                        .collect(),
+                                        .map(|(_, r)| (*a, **r)),
                                 )
                             } else {
                                 tmp.push((*a, *b));
@@ -187,12 +185,16 @@ impl Puzzle {
                             })
                             .collect(),
                     );
+                    cnf.push(CNF {
+                        id: *id,
+                        rule: CNFR::Bin(*a, *b),
+                    });
                 }
                 Inter::Unit(_) => unreachable!(),
             }
         }
         Puzzle {
-            cnf,
+            cnf: cnf.iter().unique().cloned().collect(),
             rules,
             messages,
         }
@@ -204,7 +206,6 @@ impl Puzzle {
     }
 
     fn resolve(&self, elem: &Element, max_len: usize) -> HashSet<String> {
-        //println!("resolve: {:?}, max_len: {}", elem, max_len);
         let mut collection = HashSet::new();
         match elem {
             Element::Char(c) => {
@@ -233,12 +234,6 @@ impl Puzzle {
                     .collect();
             }
         };
-        println!(
-            "ret resolve: {:?}, collection_len: {}, max_len: {}",
-            elem,
-            collection.len(),
-            max_len
-        );
         collection
     }
 
@@ -260,21 +255,18 @@ impl Puzzle {
                 for partition in 1..=span_len {
                     let ra = (partition, start);
                     let rb = (span_len - partition, start + partition);
-                    //println!("{:?}, {:?}", ra, rb);
                     if let (Some(ref b), Some(ref c)) = (production.get(&ra), production.get(&rb)) {
                         let v = b
                             .iter()
                             .cartesian_product(c.iter())
                             .map(|(b, c)| CNFR::Bin(*b, *c))
                             .collect_vec();
-                        if b.len() > 1 || c.len() > 1 {
-                            println!("looking - {:?}", v);
-                        }
                         let mut v = v
                             .iter()
-                            .filter_map(|b| self.cnf.iter().find(|r| r.rule == *b).map(|r| r.id))
+                            .flat_map(|b| {
+                                self.cnf.iter().filter(move |r| r.rule == *b).map(|r| r.id)
+                            })
                             .collect_vec();
-                        //println!("found - {:?}", v);
                         production
                             .entry((span_len, start))
                             .or_insert(Vec::new())
@@ -283,21 +275,9 @@ impl Puzzle {
                 }
             }
         }
-
-        for x in 0..input.len() {
-            for y in 1..=input.len() {
-                print!(
-                    "{:?} ",
-                    production
-                        .get(&(input.len() - x, y))
-                        .cloned()
-                        .unwrap_or_default()
-                );
-            }
-            println!();
-        }
-
-        production.get(&(input.len(), 1)).map_or(0, |v| v.len()) > 0
+        production
+            .get(&(input.len(), 1))
+            .map_or(false, |v| v.contains(&0))
     }
 }
 
@@ -321,7 +301,6 @@ fn generator(input: &str) -> Result<GeneratorType> {
 
 #[aoc(day19, part1)]
 fn solve_part1(input: &GeneratorType) -> usize {
-    println!("{:#?}", input);
     input.messages.iter().filter(|m| input.check(m)).count()
 }
 
@@ -337,8 +316,8 @@ fn solve_part2(input: &GeneratorType) -> usize {
     input
         .rules
         .insert(132, "132: 11 31".parse::<Rule>().unwrap());
+    input = Puzzle::new(input.rules, input.messages);
 
-    //println!("{:?}", input);
     input.messages.iter().filter(|m| input.check(m)).count()
 }
 
@@ -369,28 +348,27 @@ aaaabbb"#;
     #[test]
     fn test_valid_production2() {
         let puzzle = generator(SAMPLE).unwrap();
-        println!("{:#?}", puzzle.cnf);
         assert!(puzzle.check("abbbab"));
     }
     #[test]
     fn test_valid_production() {
         let puzzle = generator(SAMPLE).unwrap();
-        println!("{:#?}", puzzle.cnf);
         assert!(puzzle.check("ababbb"));
     }
-    //#[test]
+    #[test]
     fn test_part1() {
         assert_eq!(solve_part1(&generator(SAMPLE).unwrap()), 2);
     }
 
-    //#[test]
+    #[test]
     fn test_valid_production3() {
         let puzzle = generator(
             r#"42: 9 14 | 10 1
 9: 14 27 | 1 26
 10: 23 14 | 28 1
 1: "a"
-11: 42 31
+11: 42 31 | 42 132
+132: 11 31
 5: 1 14 | 15 1
 19: 14 1 | 14 14
 12: 24 14 | 19 1
@@ -412,35 +390,20 @@ aaaabbb"#;
 21: 14 1 | 1 14
 25: 1 1 | 1 14
 22: 14 14
-8: 42
+8: 42 | 42 8
 26: 14 22 | 1 20
 18: 15 15
 7: 14 5 | 1 21
 24: 14 1
 
-abbbbbabbbaaaababbaabbbbabababbbabbbbbbabaaaa
-bbabbbbaabaabba
-babbbbaabbbbbabbbbbbaabaaabaaa
-aaabbbbbbaaaabaababaabababbabaaabbababababaaa
-bbbbbbbaaaabbbbaaabbabaaa
-bbbababbbbaaaaaaaabbababaaababaabab
-ababaaaaaabaaab
-ababaaaaabbbaba
-baabbaaaabbaaaababbaababb
-abbbbabbbbaaaababbbbbbaaaababb
-aaaaabbaabaaaaababaa
-aaaabbaaaabbaaa
-aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
-babaaabbbaaabaababbaabababaaab
-aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba"#,
+a"#,
         )
         .unwrap();
-        //let mut cnf = puzzle.cnf.clone();
-        //cnf.sort_by_key(|c| c.id);
-        //println!("{:#?}", cnf);
+        let mut cnf = puzzle.cnf.clone();
+        cnf.sort_by_key(|c| c.id);
         assert!(puzzle.check("bbabbbbaabaabba"));
     }
-    //#[test]
+    #[test]
     fn test_part2() {
         assert_eq!(
             solve_part2(

@@ -59,7 +59,8 @@ fn solve_part1(input: &[GeneratorType]) -> u64 {
 #[aoc(day15, part2)]
 fn solve_part2(input: &[GeneratorType]) -> u64 {
     MemoryGame::new(input)
-        .take(30000000 - (input.len() + 1))
+        //.take(30000000 - (input.len() + 1))
+        .take(3000 - (input.len() + 1))
         .last()
         .unwrap()
 }
